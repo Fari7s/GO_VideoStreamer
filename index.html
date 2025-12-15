@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Go HLS Streamer</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 40px auto; padding: 20px; }
+        video { width: 100%; max-width: 900px; background: #000; }
+        .video-item { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        em { color: #cc6600; font-style: normal; font-weight: bold; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .quality-selector {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 12px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+        .quality-selector label {
+            color: white;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+        .quality-selector select {
+            padding: 4px;
+            border-radius: 4px;
+        }
+        .video-container {
+            position: relative;
+            max-width: 900px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Go HLS Video Streaming Service</h1>
+
+    <h2>Upload New Video</h2>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="video" accept="video/*" required>
+        <button type="submit">Upload File</button>
+    </form>
+    
+    {{if ne (len .UploadedFiles) 0}}
+    <h2 style="margin-top: 40px;">Convert/Manage Existing Uploads</h2>
+
+    <form action="/reconvert" method="post" onsubmit="this.querySelector('button').disabled=true;" style="margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; border-radius: 4px; display: inline-block;">
+        <p style="margin-top: 0;"><strong>Start HLS Conversion:</strong></p>
+        <select name="uploaded_file" required>
+            <option value="">-- Select a file to convert --</option>
+            {{range .UploadedFiles}}
+            <option value="{{.Name}}">{{.Name}}</option>
+            {{end}}
+        </select>
+        <button type="submit">Start HLS Conversion</button>
+    </form>
+
+    <p style="margin-top: 20px;"><strong>Or, delete the original uploaded file:</strong></p>
+    {{range .UploadedFiles}}
+    <div style="margin-bottom: 5px; padding: 5px 0;">
+        <span>{{.Name}}</span>
+        <form action="/delete_upload" method="post" style="display:inline; margin-left: 15px;" onsubmit="return confirm('Are you sure you want to delete the original file: {{.Name}}? This cannot be undone.');">
+            <input type="hidden" name="filename" value="{{.Name}}">
+            <button type="submit" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px;">Delete Original File</button>
+        </form>
+    </div>
+    {{end}}
+    {{end}}
+
+    <h2>Available Streams</h2>
+    {{if eq (len .Videos) 0}}
+        <p>No videos yet. Upload one!</p>
+    {{else}}
+        {{range .Videos}}
+            <div class="video-item">
+                <h3>{{.ID}} {{if not .Ready}}<em>(Processing...)</em>{{end}}</h3>
+                
+                {{if .Ready}}
+                    <div class="video-container">
+                        <video id="video-{{.ID}}" controls preload="metadata">
+                            <source src="/hls/{{.ID}}/master.m3u8" type="application/x-mpegURL">
+                            Your browser does not support HLS.
+                        </video>
+                        <div class="quality-selector">
+                            <label for="quality-{{.ID}}">Quality:</label>
+                            <select id="quality-{{.ID}}">
+                                <option value="auto">Auto</option>
+                                <option value="720">720p</option>
+                                <option value="540">540p</option>
+                                <option value="360">360p</option>
+                            </select>
+                        </div>
+                    </div>
+                {{else}}
+                    <p>Conversion in progress. Page will refresh automatically...</p>
+                {{end}}
+
+                <p style="margin-top: 15px;">
+                    {{if .Ready}}
+                        <a href="/hls/{{.ID}}/master.m3u8" target="_blank">Direct master playlist link</a>
+                        <span style="margin-left: 15px;">|</span>
+                    {{end}}
+                    <form action="/delete_hls" method="post" style="display:inline; margin-left: 15px;" onsubmit="return confirm('Are you sure you want to delete all HLS files for {{.ID}}?');">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <button type="submit" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px;">Delete HLS Content</button>
+                    </form>
+                </p>
+
+            </div>
+        {{end}}
+    {{end}}
+
+    <script>
+        // Auto-refresh if there are videos still processing
+        {{if .HasProcessing}}
+        window.setTimeout(function() {
+            location.reload();
+        }, 8000);
+        {{end}}
+
+        // HLS.js setup with quality selection
+        document.querySelectorAll('video').forEach(video => {
+            const sourceTag = video.querySelector('source');
+            if (!sourceTag) return;
+
+            const masterUrl = sourceTag.src;
+            const videoId = video.id.split('-')[1];
+            const qualitySelect = document.getElementById('quality-' + videoId);
+
+            if (Hls.isSupported()) {
+                let hls = new Hls({
+                    startLevel: -1  // Auto
+                });
+                hls.loadSource(masterUrl);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    // Levels are now available
+                });
+
+                if (qualitySelect) {
+                    qualitySelect.addEventListener('change', function() {
+                        const val = this.value;
+                        if (val === 'auto') {
+                            hls.currentLevel = -1;
+                        } else {
+                            const height = parseInt(val);
+                            const level = hls.levels.findIndex(l => l.height === height);
+                            if (level !== -1) {
+                                hls.currentLevel = level;
+                            }
+                        }
+                    });
+                }
+
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS support (Safari) - limited manual control
+                video.src = masterUrl;
+            }
+        });
+    </script>
+</body>
+</html>
