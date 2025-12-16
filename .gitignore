@@ -2,3 +2,6 @@
 
 !index.html
 !main.go
+
+!/lib
+!/lib/**
