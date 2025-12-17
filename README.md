@@ -10,5 +10,4 @@ Main features:
 -Simple GO service, localhost:8080 only
 
 Future Plans:
-Since Im not a web and GO developer, I have no plans on completing or supporting this project.
-
+Since I have no interest in web development or Go, there are no plans to complete or support this project any further.
