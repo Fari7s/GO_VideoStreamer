@@ -23,6 +23,7 @@ var HLS_VARIANTS = []variant{
 	{"360p", "360", "800k", "640"},
 	{"540p", "540", "1800k", "960"},
 	{"720p", "720", "3500k", "1280"},
+	{"1080p", "1080", "6000k", "1920"},
 }
 
 // ConvertToHLS performs multi-resolution encoding and generates a master playlist.

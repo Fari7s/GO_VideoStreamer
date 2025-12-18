@@ -5,10 +5,17 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 1000px; margin: 40px auto; padding: 20px; }
-        video { width: 100%; max-width: 900px; background: #000; }
+        video { width: 100%; height: auto; background: #000; display: block; }
         .video-item { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
         em { color: #cc6600; font-style: normal; font-weight: bold; }
         button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .video-container {
+            position: relative;
+            max-width: 900px;
+            background: #000;
+        }
+
         .quality-selector {
             position: absolute;
             top: 10px;
@@ -16,20 +23,38 @@
             background: rgba(0,0,0,0.7);
             padding: 8px 12px;
             border-radius: 4px;
-            z-index: 10;
+            z-index: 2147483647; /* Maximum z-index to stay above native controls */
         }
+        
         .quality-selector label {
             color: white;
             font-size: 14px;
             margin-right: 8px;
         }
+        
         .quality-selector select {
             padding: 4px;
             border-radius: 4px;
+            background: #fff;
         }
-        .video-container {
-            position: relative;
-            max-width: 900px;
+
+        /* Fullscreen Specific Styles */
+        .video-container:fullscreen {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-container:fullscreen video {
+            max-height: 100%;
+            width: auto;
+        }
+
+        .video-container:fullscreen .quality-selector {
+            top: 20px;
+            right: 20px;
         }
     </style>
 </head>
@@ -77,7 +102,7 @@
                 <h3>{{.ID}} {{if not .Ready}}<em>(Processing...)</em>{{end}}</h3>
                 
                 {{if .Ready}}
-                    <div class="video-container">
+                    <div class="video-container" id="container-{{.ID}}">
                         <video id="video-{{.ID}}" controls preload="metadata">
                             <source src="/hls/{{.ID}}/master.m3u8" type="application/x-mpegURL">
                             Your browser does not support HLS.
@@ -86,10 +111,12 @@
                             <label for="quality-{{.ID}}">Quality:</label>
                             <select id="quality-{{.ID}}">
                                 <option value="auto">Auto</option>
+                                <option value="1080">1080p</option>
                                 <option value="720">720p</option>
                                 <option value="540">540p</option>
                                 <option value="360">360p</option>
                             </select>
+                            <button onclick="toggleFS('{{.ID}}')" style="margin-left:10px; padding: 2px 5px; cursor:pointer;">⛶</button>
                         </div>
                     </div>
                 {{else}}
@@ -106,7 +133,6 @@
                         <button type="submit" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px;">Delete HLS Content</button>
                     </form>
                 </p>
-
             </div>
         {{end}}
     {{end}}
@@ -119,6 +145,18 @@
         }, 8000);
         {{end}}
 
+        // Fullscreen Toggle Helper
+        function toggleFS(id) {
+            const container = document.getElementById('container-' + id);
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
         // HLS.js setup with quality selection
         document.querySelectorAll('video').forEach(video => {
             const sourceTag = video.querySelector('source');
@@ -129,15 +167,9 @@
             const qualitySelect = document.getElementById('quality-' + videoId);
 
             if (Hls.isSupported()) {
-                let hls = new Hls({
-                    startLevel: -1  // Auto
-                });
+                let hls = new Hls({ startLevel: -1 });
                 hls.loadSource(masterUrl);
                 hls.attachMedia(video);
-
-                hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    // Levels are now available
-                });
 
                 if (qualitySelect) {
                     qualitySelect.addEventListener('change', function() {
@@ -153,9 +185,7 @@
                         }
                     });
                 }
-
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Native HLS support (Safari) - limited manual control
                 video.src = masterUrl;
             }
         });
