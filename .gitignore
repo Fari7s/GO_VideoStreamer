@@ -2,6 +2,7 @@
 
 !index.html
 !main.go
+!go.mod
 
 !/lib
 !/lib/**
