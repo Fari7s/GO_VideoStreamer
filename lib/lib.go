@@ -50,11 +50,13 @@ func Init(uDir, hDir string, c *atomic.Uint64, t *template.Template) {
 
 // DeleteHLSHandler deletes the HLS output directory and all its contents
 func DeleteHLSHandler(w http.ResponseWriter, r *http.Request) {
+	//Making sure that we are not GETing for safety(deleting stuff on GET is bad)
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	//id from POST body where id is the video identifier
 	id := r.FormValue("id")
 	if id == "" {
 		http.Error(w, "No ID provided", http.StatusBadRequest)
@@ -68,22 +70,26 @@ func DeleteHLSHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Deleted HLS content for ID: %s\n", id)
 	}
 
+	//back to main page
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // DeleteUploadHandler deletes the original uploaded video file
 func DeleteUploadHandler(w http.ResponseWriter, r *http.Request) {
+	//Making sure that we are not GETing for safety(deleting stuff on GET is bad)
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	//extract filename from POST body
 	filename := r.FormValue("filename")
 	if filename == "" {
 		http.Error(w, "No filename provided", http.StatusBadRequest)
 		return
 	}
 
+	//full path to the uploaded file
 	inputPath := filepath.Join(uploadDir, filename)
 
 	if err := os.Remove(inputPath); err != nil {
@@ -97,6 +103,7 @@ func DeleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 
 // RootHandler renders the main page with current video status
 func RootHandler(w http.ResponseWriter, r *http.Request) {
+	// Only respond to root path
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
@@ -157,6 +164,7 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 
 // UploadHandler saves a new video and DOES NOT start background HLS conversion
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
+	// Only accept POST requests
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -183,6 +191,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer out.Close()
 
+	//Copy uploaded content to the new file in uploads directory
 	_, err = io.Copy(out, file)
 	if err != nil {
 		http.Error(w, "Save failed", http.StatusInternalServerError)
@@ -194,6 +203,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 // ReconvertHandler allows manual conversion of an already-uploaded but unconverted file
 func ReconvertHandler(w http.ResponseWriter, r *http.Request) {
+	// Only accept POST requests
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

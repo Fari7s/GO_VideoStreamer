@@ -46,7 +46,7 @@ func main() {
 	http.HandleFunc("/delete_hls", lib.DeleteHLSHandler)
 	http.HandleFunc("/delete_upload", lib.DeleteUploadHandler)
 
-	// Static file serving
+	// setts src bindings
 	http.Handle("/hls/", http.StripPrefix("/hls/", http.FileServer(http.Dir(hlsDir))))
 	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadDir))))
 
