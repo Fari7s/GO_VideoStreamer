@@ -5,7 +5,7 @@ Main features:
 
 -Video fragmentization in to 10-sec .ts batches.
 
--FFmpeg encoding, hardcoded settings: quality: 360p, 540p, 720p, 1080p (changeble in code, you can add your own inside HSL gen function), H264 compression, .mp4, 30-GOP.
+-FFmpeg encoding, hardcoded settings: quality: 144p, 240p 360p, 540p, 720p, 1080p (changeble in code, you can add your own inside HSL gen function), H264 compression, .mp4, 30-GOP.
 
 -Simple GO service, localhost:8080 only
 

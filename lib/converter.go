@@ -20,6 +20,8 @@ type variant struct {
 
 // Define quality variants (360p, 540p, 720p) with appropriate bitrates
 var HLS_VARIANTS = []variant{
+	{"144p", "144", "200k", "256"},
+	{"240p", "240", "400k", "426"},
 	{"360p", "360", "800k", "640"},
 	{"540p", "540", "1800k", "960"},
 	{"720p", "720", "3500k", "1280"},
